@@ -19,13 +19,17 @@ instance Game TestGame where
     
     tick g = do 
         tme <- timer
-        res <- obtainResource "stack.yaml" :: ValkyrieM IO (Maybe Binary)
-        liftIO . putStrLn $ show res
+        res1 <- obtainResource "data/valkyrie.vs" :: ValkyrieM IO (Maybe VertexShader)
+        res2 <- obtainResource "data/valkyrie.ps" :: ValkyrieM IO (Maybe PixelShader)
+        liftIO . putStrLn $ show res1
+        liftIO . putStrLn $ show res2
         ks <- keyState Key'Escape
         when (ks == KeyState'Pressed) exitValkyrie
         return g
 
-    shutdown _ = return ()
+    shutdown _ = do 
+        releaseResource "data/valkyrie.vs"
+        releaseResource "data/valkyrie.ps"
 
 data Binary = Binary B.ByteString deriving (Show, Typeable)
 
@@ -39,6 +43,7 @@ instance Resource Binary where
     load rm rs = do
         (b,_) <- runLoad ld rs
         return b
+    release b = return ()
         
 main :: IO ()
 main = valkyrie TG

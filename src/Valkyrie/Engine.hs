@@ -11,6 +11,7 @@ import Valkyrie.Game
 import Valkyrie.Timer
 import Valkyrie.Resource
 import Valkyrie.Resource.File
+import Valkyrie.Render
 
 import Control.Lens
 import Control.Monad
@@ -36,12 +37,14 @@ createValkyrie = do
     tmr <- createTimer
     let fileLocator = createFileResourceLocator "./"
     resMgr <- fmap (attachLocator fileLocator) createResourceManager
+    renderWorld <- createRenderWorld cfg
     return $ Valkyrie {
         _valkCfg = cfg,
         _valkWindow = win,
         _valkExit = False,
         _valkTimer = tmr, 
-        _valkResourceManager = resMgr
+        _valkResourceManager = resMgr,
+        _valkRenderWorld = renderWorld
     }
     
 mainLoop :: Game g => g -> ValkyrieM IO g
@@ -49,7 +52,8 @@ mainLoop g = do
     updateTimer
     win <- fmap _valkWindow get
     liftIO $ GLFW.pollEvents
-    --TODO: render, physics, input etc
+    render
+    --TODO: physics etc
     liftIO $ GLFW.swapBuffers win
     g' <- tick g
     ex <- fmap _valkExit get

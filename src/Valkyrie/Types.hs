@@ -4,6 +4,7 @@ module Valkyrie.Types where
 
 import Valkyrie.Timer.Types
 import Valkyrie.Resource.Types
+import Valkyrie.Render.Types
 
 import Control.Lens.TH
 import qualified Data.Configurator.Types as C
@@ -14,7 +15,8 @@ data Valkyrie = Valkyrie {
     _valkWindow :: GLFW.Window,
     _valkExit :: Bool,
     _valkTimer :: Timer,
-    _valkResourceManager :: ResourceManager
+    _valkResourceManager :: ResourceManager,
+    _valkRenderWorld :: RenderWorld
 }
 
 makeLenses ''Valkyrie

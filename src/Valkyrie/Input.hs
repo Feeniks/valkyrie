@@ -13,8 +13,6 @@ import Valkyrie.Types
 import Valkyrie.Valkyrie
 
 import Control.Monad.Trans
-import qualified Data.Configurator as C
-import qualified Data.Configurator.Types as C
 import Graphics.UI.GLFW
 
 keyState :: Key -> ValkyrieM IO KeyState

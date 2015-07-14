@@ -57,6 +57,8 @@ obtainResource path = do
 releaseResource :: String -> ValkyrieM IO ()
 releaseResource path = do 
     (ResourceManager _ rx) <- fmap (view valkResourceManager) get
+    rmap <- liftIO . atomically $ readTVar rx
+    maybe (return ()) (\(RB r) -> release r) $ M.lookup path rmap
     liftIO . atomically $ modifyTVar rx $ M.delete path
     
 obtainNew :: (Resource r, Typeable r) => String -> ResourceManager -> ValkyrieM IO (Maybe r)
@@ -66,9 +68,8 @@ obtainNew path rm@(ResourceManager ((RLB l):lx) rx) = do
     case mres of 
         Nothing -> obtainNew path $ ResourceManager lx rx
         Just r -> do 
-            liftIO . atomically . modifyTVar rx $ insert path mres
+            liftIO . atomically . modifyTVar rx $ insert path r
             return mres
             
-insert :: (Resource r, Typeable r) => String -> Maybe r -> ResourceMap -> ResourceMap
-insert _ Nothing = id
-insert k (Just v) = M.insert k $ RB v
+insert :: (Resource r, Typeable r) => String -> r -> ResourceMap -> ResourceMap
+insert k v = M.insert k $ RB v

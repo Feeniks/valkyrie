@@ -19,6 +19,7 @@ class ResourceStream rs where
 
 class Resource r where 
     load :: (MonadIO m, ResourceStream rs) => ResourceManager -> rs -> m r
+    release :: MonadIO m => r -> m ()
 
 class ResourceLocator rl where 
     resolve :: (MonadIO m, Resource r) => ResourceManager -> String -> rl -> m (Maybe r)
