@@ -1,9 +1,8 @@
 
 module Valkyrie.Graphics.Shader(
+    Shader(..),
     VertexShader,
-    PixelShader,
-    bindVertexShader,
-    bindPixelShader
+    PixelShader
 ) where 
 
 import Valkyrie.Types
@@ -21,8 +20,17 @@ import Foreign.C.Types
 import Foreign.Ptr
 import qualified Graphics.Rendering.OpenGL.Raw as GL
 
+class Shader s where 
+    shaderID :: s -> GL.GLuint
+
 newtype VertexShader = VS GL.GLuint deriving Show
 newtype PixelShader = PS GL.GLuint deriving Show
+
+instance Shader VertexShader where 
+    shaderID (VS i) = i
+    
+instance Shader PixelShader where 
+    shaderID (PS i) = i
 
 instance Resource VertexShader where 
     load _ rs = do 
@@ -53,15 +61,15 @@ loadShader typ = do
     liftIO $ GL.glCompileShader sid
     merr <- liftIO $ compileError sid
     case merr of 
-        Nothing -> return sid
-        Just e -> error e
+        Right _ -> return sid
+        Left e -> error e
     
 compileError id = do 
     ok <- liftM toBool $ fetch GL.gl_COMPILE_STATUS
     case ok of 
-        True -> return Nothing
+        True -> return $ Right ()
         False -> do 
             ll <- fetch GL.gl_INFO_LOG_LENGTH
-            allocaArray0 (fromIntegral ll) $ \mptr -> GL.glGetShaderInfoLog id ll nullPtr mptr >> peekCString mptr >>= return . Just
+            allocaArray0 (fromIntegral ll) $ \mptr -> GL.glGetShaderInfoLog id ll nullPtr mptr >> peekCString mptr >>= return . Left
     where 
     fetch i = onPtr $ GL.glGetShaderiv id i

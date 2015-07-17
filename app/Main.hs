@@ -3,7 +3,6 @@
 module Main where
 
 import Valkyrie
-import Valkyrie.Resource
 import Valkyrie.Resource.Types
 
 import Control.Monad
@@ -19,17 +18,13 @@ instance Game TestGame where
     
     tick g = do 
         tme <- timer
-        res1 <- obtainResource "data/valkyrie.vs" :: ValkyrieM IO (Maybe VertexShader)
-        res2 <- obtainResource "data/valkyrie.ps" :: ValkyrieM IO (Maybe PixelShader)
-        liftIO . putStrLn $ show res1
-        liftIO . putStrLn $ show res2
+        t <- timer
+        liftIO . putStrLn $ show t
         ks <- keyState Key'Escape
         when (ks == KeyState'Pressed) exitValkyrie
         return g
 
-    shutdown _ = do 
-        releaseResource "data/valkyrie.vs"
-        releaseResource "data/valkyrie.ps"
+    shutdown _ = return ()
 
 data Binary = Binary B.ByteString deriving (Show, Typeable)
 

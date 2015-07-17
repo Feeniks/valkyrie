@@ -5,7 +5,9 @@ module Valkyrie.Resource(
     attachResourceLocator, 
     attachLocator,
     obtainResource,
-    releaseResource
+    releaseResource, 
+    obtainResourceInternal, 
+    releaseResourceInternal
 ) where 
 
 import Valkyrie.Types
@@ -50,18 +52,26 @@ attachLocator l (ResourceManager lx rx) = ResourceManager (RLB l:lx) rx
 
 obtainResource :: (Resource r, Typeable r) => String -> ValkyrieM IO (Maybe r)
 obtainResource path = do 
-    rm@(ResourceManager lx rx) <- fmap (view valkResourceManager) get
+    rm <- fmap (view valkResourceManager) get
+    obtainResourceInternal path rm
+    
+obtainResourceInternal :: (MonadIO m, Resource r, Typeable r) => String -> ResourceManager -> m (Maybe r)
+obtainResourceInternal path rm@(ResourceManager lx rx) = do 
     rmap <- liftIO . atomically $ readTVar rx
     maybe (obtainNew path rm) (\(RB r) -> return $ cast r) $ M.lookup path rmap
     
 releaseResource :: String -> ValkyrieM IO ()
 releaseResource path = do 
-    (ResourceManager _ rx) <- fmap (view valkResourceManager) get
+    rm <- fmap (view valkResourceManager) get
+    releaseResourceInternal path rm
+    
+releaseResourceInternal :: MonadIO m => String -> ResourceManager -> m ()
+releaseResourceInternal path (ResourceManager _ rx) = do 
     rmap <- liftIO . atomically $ readTVar rx
     maybe (return ()) (\(RB r) -> release r) $ M.lookup path rmap
     liftIO . atomically $ modifyTVar rx $ M.delete path
     
-obtainNew :: (Resource r, Typeable r) => String -> ResourceManager -> ValkyrieM IO (Maybe r)
+obtainNew :: (MonadIO m, Resource r, Typeable r) => String -> ResourceManager -> m (Maybe r)
 obtainNew path rm@(ResourceManager [] rx) = return Nothing
 obtainNew path rm@(ResourceManager ((RLB l):lx) rx) = do
     mres <- resolve rm path l
