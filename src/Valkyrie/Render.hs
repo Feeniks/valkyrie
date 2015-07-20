@@ -11,6 +11,8 @@ module Valkyrie.Render(
 import Valkyrie.Types
 import Valkyrie.Render.Types
 import Valkyrie.Valkyrie
+import Valkyrie.Timer
+import Valkyrie.Timer.Types
 import Valkyrie.Resource
 import Valkyrie.Graphics.Util
 import Valkyrie.Graphics.Program
@@ -65,6 +67,7 @@ initRenderer = do
     
 frame :: RenderWorld -> ValkyrieM IO ()
 frame world = do 
+    t <- fmap (view elapsedSeconds) timer
     GL.glClear GL.gl_COLOR_BUFFER_BIT
     GL.glClear GL.gl_DEPTH_BUFFER_BIT
     --test rendering stuff
@@ -72,11 +75,12 @@ frame world = do
     (Just mesh) <- obtainResource "data/cube_no_normals.mdl" :: ValkyrieM IO (Maybe Mesh)
     (Just mat) <- obtainResource "data/t.mtl" :: ValkyrieM IO (Maybe Material)
     useProgram p
-    bindMatrix44 p "M" $ identity44
+    bindMatrix44 p "M" $ (scale 3 3 3) <::> (rotationY (Radians t))
     bindMatrix44 p "VP" $ (world^.rwView) <::> (world^.rwProj)
     bindMesh mesh
     bindMaterial p mat
     drawMeshPart "cube" mesh
+    unbindMesh
     
 bindMaterial :: MonadIO m => Program -> Material -> m ()
 bindMaterial p mat = mapM_ (uncurry $ bindMaterialParam p) $ M.toList $ params mat

@@ -4,6 +4,7 @@ uniform mat4 M;
 uniform mat4 VP;
 
 attribute vec3 pos;
+attribute vec3 norm;
 attribute vec2 texcoord;
 
 varying vec2 frag_texcoord;
