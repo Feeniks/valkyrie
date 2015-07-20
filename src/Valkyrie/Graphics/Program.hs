@@ -4,6 +4,7 @@ module Valkyrie.Graphics.Program(
     Program,
     createProgram,
     useProgram,
+    getAttribLocation,
     bindFloat1,
     bindFloat2,
     bindFloat3,
@@ -61,7 +62,10 @@ createProgram sx = liftIO $ do
         
 useProgram :: MonadIO m => Program -> m ()
 useProgram (Program pid) = GL.glUseProgram pid
-        
+
+getAttribLocation :: MonadIO m => Program -> String -> m GL.GLint
+getAttribLocation (Program pid) n = liftIO $ withGLstring n $ GL.glGetAttribLocation pid
+
 bindFloat1 :: MonadIO m => Program -> String -> NReal -> m ()
 bindFloat1 p k v = do 
     loc <- paramLoc p k
@@ -88,7 +92,7 @@ bindMatrix44 p k m = do
     let mv = V.fromList $ toGL m
     liftIO $ V.unsafeWith mv $ \ptr -> GL.glUniformMatrix4fv loc 1 0 ptr
 
-bindTexture :: MonadIO m => Program -> String -> Texture -> m ()
+bindTexture :: MonadIO m => Program -> String -> Texture -> m () --TODO: texture index
 bindTexture p k (Texture2D tid) = do 
     loc <- paramLoc p k
     GL.glActiveTexture GL.gl_TEXTURE0

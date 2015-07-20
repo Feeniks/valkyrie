@@ -26,6 +26,8 @@ import Control.Monad.Trans
 import qualified Data.Configurator as C
 import qualified Data.Configurator.Types as C
 import qualified Data.Map as M
+import Foreign
+import Foreign.Ptr
 import qualified Graphics.Rendering.OpenGL.Raw as GL
 import qualified Graphics.UI.GLFW as GLFW
 
@@ -77,10 +79,26 @@ frame world = do
     useProgram p
     bindMatrix44 p "M" $ (scale 3 3 3) <::> (rotationY (Radians t))
     bindMatrix44 p "VP" $ (world^.rwView) <::> (world^.rwProj)
-    bindMesh mesh
+    bindMeshVBO mesh
+    bindMeshAttrs p
     bindMaterial p mat
     drawMeshPart "cube" mesh
-    unbindMesh
+    unbindMeshAttrs p
+    
+bindMeshAttrs :: MonadIO m => Program -> m ()
+bindMeshAttrs p = do 
+    [vloc, nloc, tloc] <- mapM (getAttribLocation p) ["vPosition", "vNormal", "vTexCoord"]
+    let stride = 8 * csize
+    enableVertexAttrib (fromIntegral vloc) 0 stride 3
+    enableVertexAttrib (fromIntegral nloc) (3 * csize) stride 3
+    enableVertexAttrib (fromIntegral tloc) (6 * csize) stride 2
+    
+unbindMeshAttrs :: MonadIO m => Program -> m ()
+unbindMeshAttrs p = do 
+    [vloc, nloc, tloc] <- mapM (getAttribLocation p) ["vPosition", "vNormal", "vTexCoord"]
+    GL.glDisableVertexAttribArray $ fromIntegral vloc
+    GL.glDisableVertexAttribArray $ fromIntegral nloc
+    GL.glDisableVertexAttribArray $ fromIntegral tloc
     
 bindMaterial :: MonadIO m => Program -> Material -> m ()
 bindMaterial p mat = mapM_ (uncurry $ bindMaterialParam p) $ M.toList $ params mat
@@ -91,3 +109,11 @@ bindMaterialParam p k (MPF2 v) = bindFloat2 p k v
 bindMaterialParam p k (MPF3 v) = bindFloat3 p k v
 bindMaterialParam p k (MPF4 v) = bindFloat4 p k v
 bindMaterialParam p k (MPTexture v) = bindTexture p k v
+
+enableVertexAttrib :: MonadIO m => GL.GLuint -> Int -> Int -> Int -> m ()
+enableVertexAttrib index offset stride nc = do 
+    GL.glEnableVertexAttribArray index
+    GL.glVertexAttribPointer index (fromIntegral nc) GL.gl_FLOAT (fromBool False) (fromIntegral stride) $ plusPtr nullPtr offset
+
+csize :: Int
+csize = sizeOf (undefined :: GL.GLfloat)

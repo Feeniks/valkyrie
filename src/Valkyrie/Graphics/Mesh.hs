@@ -2,8 +2,7 @@
 
 module Valkyrie.Graphics.Mesh(
     Mesh,
-    bindMesh,
-    unbindMesh,
+    bindMeshVBO,
     drawMeshPart
 ) where 
 
@@ -44,22 +43,8 @@ instance Resource Mesh where
         
     release m = return () --TODO: IMPL
     
-csize :: Int
-csize = sizeOf (undefined :: GL.GLfloat)
-    
-bindMesh :: MonadIO m => Mesh -> m ()
-bindMesh m = liftIO $ do 
-    GL.glBindBuffer GL.gl_ARRAY_BUFFER $ m ^. meshVBO
-    let stride = 8 * csize
-    enableVertexAttrib 0 0 stride 3
-    enableVertexAttrib 1 (3 * csize) stride 3
-    enableVertexAttrib 2 (6 * csize) stride 2
-    
-unbindMesh :: MonadIO m => m ()
-unbindMesh = do 
-    GL.glDisableVertexAttribArray 0 
-    GL.glDisableVertexAttribArray 1
-    GL.glDisableVertexAttribArray 2
+bindMeshVBO :: MonadIO m => Mesh -> m ()
+bindMeshVBO m = liftIO $ GL.glBindBuffer GL.gl_ARRAY_BUFFER $ m ^. meshVBO
 
 drawMeshPart :: MonadIO m => String -> Mesh -> m ()
 drawMeshPart n m = liftIO $ do 
@@ -139,10 +124,3 @@ isEOL c = c == '\r' || c == '\n'
 
 readBS :: Read a => B.ByteString -> a
 readBS = read . B.unpack
-
-enableVertexAttrib :: Int -> Int -> Int -> Int -> IO ()
-enableVertexAttrib ix offset stride nc = do 
-    let index = fromIntegral ix
-    GL.glEnableVertexAttribArray index
-    GL.glVertexAttribPointer index (fromIntegral nc) GL.gl_FLOAT (fromBool False) (fromIntegral stride) $ plusPtr nullPtr offset
-
