@@ -54,8 +54,8 @@ mainLoop g = do
     liftIO $ GLFW.pollEvents
     render
     --TODO: physics etc
-    liftIO $ GLFW.swapBuffers win
     g' <- tick g
+    liftIO $ GLFW.swapBuffers win
     ex <- fmap _valkExit get
     case ex of 
         True -> return g'

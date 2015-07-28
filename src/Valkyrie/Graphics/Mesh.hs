@@ -1,8 +1,8 @@
-{-# LANGUAGE TemplateHaskell #-}
 
 module Valkyrie.Graphics.Mesh(
-    Mesh,
+    Valkyrie.Graphics.Mesh.Types.Mesh,
     bindMeshVBO,
+    bindMeshPart,
     drawMeshPart
 ) where 
 
@@ -11,6 +11,7 @@ import Valkyrie.Valkyrie
 import Valkyrie.Resource
 import Valkyrie.Resource.Types
 import Valkyrie.Graphics.Util
+import Valkyrie.Graphics.Mesh.Types
 
 import Control.Applicative
 import Control.Lens
@@ -22,19 +23,9 @@ import qualified Data.ByteString as BS
 import qualified Data.ByteString.Char8 as B
 import qualified Data.Map as M
 import Data.Traversable (sequence)
-import Data.Typeable
 import Foreign
 import Foreign.Ptr
 import qualified Graphics.Rendering.OpenGL.Raw as GL
-import Debug.Trace
-
-data Mesh = Mesh {
-    _meshVertexCount :: GL.GLsizei,
-    _meshVBO :: GL.GLuint,
-    _meshParts :: M.Map String (Int, GL.GLuint)
-} deriving (Show, Typeable)
-
-makeLenses ''Mesh
 
 instance Resource Mesh where 
     load rm rs = do 
@@ -46,14 +37,19 @@ instance Resource Mesh where
 bindMeshVBO :: MonadIO m => Mesh -> m ()
 bindMeshVBO m = liftIO $ GL.glBindBuffer GL.gl_ARRAY_BUFFER $ m ^. meshVBO
 
+bindMeshPart :: MonadIO m => String -> Mesh -> m ()
+bindMeshPart n m = liftIO $ do 
+    let ibo = m ^. (meshParts.at n)
+    maybe (return ()) bind ibo
+    where 
+    bind (c, i) = GL.glBindBuffer GL.gl_ELEMENT_ARRAY_BUFFER i
+
 drawMeshPart :: MonadIO m => String -> Mesh -> m ()
 drawMeshPart n m = liftIO $ do 
     let ibo = m ^. (meshParts.at n)
     maybe (return ()) draw ibo
     where 
-    draw (c, i) = do 
-        GL.glBindBuffer GL.gl_ELEMENT_ARRAY_BUFFER i
-        GL.glDrawElements GL.gl_TRIANGLES (fromIntegral c) GL.gl_UNSIGNED_INT nullPtr
+    draw (c, i) = GL.glDrawElements GL.gl_TRIANGLES (fromIntegral c) GL.gl_UNSIGNED_INT nullPtr
 
 loadMesh :: (MonadIO m, ResourceStream rs) => ResourceManager -> Load rs m Mesh
 loadMesh rm = do 
@@ -95,8 +91,8 @@ createIBO dx = do
 parseMesh = do 
     vcount <- fmap readBS $ takeTill isEOL
     endOfLine
-    verts <- trace (show vcount) $ replicateM (vcount * 8) component :: Parser [Double]
-    nparts <- trace (show verts) $ fmap readBS $ takeTill isEOL
+    verts <- replicateM (vcount * 8) component :: Parser [Double]
+    nparts <- fmap readBS $ takeTill isEOL
     endOfLine
     parts <- fmap M.fromList $ replicateM nparts part
     return (fmap realToFrac verts, parts)

@@ -5,6 +5,8 @@ module Valkyrie.Render(
     getFrameBufferSize,
     setViewMatrix, 
     setProjectionMatrix,
+    useModel,
+    removeModel,
     render
 ) where 
 
@@ -18,6 +20,7 @@ import Valkyrie.Graphics.Util
 import Valkyrie.Graphics.Program
 import Valkyrie.Graphics.Mesh
 import Valkyrie.Graphics.Material
+import Valkyrie.Graphics.Model
 import Valkyrie.Math
 
 import Control.Lens
@@ -26,6 +29,7 @@ import Control.Monad.Trans
 import qualified Data.Configurator as C
 import qualified Data.Configurator.Types as C
 import qualified Data.Map as M
+import Data.List (nub)
 import Foreign
 import Foreign.Ptr
 import qualified Graphics.Rendering.OpenGL.Raw as GL
@@ -38,7 +42,7 @@ createRenderWorld cfg = do
     let view = lookAt (V3 5 5 5) (V3 0 0 0) (V3 0 1 0)
     let proj = perspective (Degrees 60) (width / height) 1.0 1000.0
     liftIO $ initRenderer
-    return $ RenderWorld { _rwView = view, _rwProj = proj }
+    return $ RenderWorld { _rwView = view, _rwProj = proj, _rwModels = [] }
     
 getFrameBufferSize :: ValkyrieM IO (Int, Int)
 getFrameBufferSize = do 
@@ -51,6 +55,12 @@ setViewMatrix m = modify $ return . set (valkRenderWorld.rwView) m
 
 setProjectionMatrix :: Matrix44 -> ValkyrieM IO ()
 setProjectionMatrix m = modify $ return . set (valkRenderWorld.rwProj) m
+
+useModel :: Model -> ValkyrieM IO ()
+useModel m = modify $ return . over (valkRenderWorld.rwModels) (nub . (++[m]))
+
+removeModel :: Model -> ValkyrieM IO ()
+removeModel m = modify $ return . over (valkRenderWorld.rwModels) (filter (/=m))
 
 render :: ValkyrieM IO ()
 render = do 
@@ -74,16 +84,24 @@ frame world = do
     GL.glClear GL.gl_DEPTH_BUFFER_BIT
     --test rendering stuff
     (Just p) <- obtainResource "data/valkyrie.prog"
-    (Just mesh) <- obtainResource "data/cube_no_normals.mdl" :: ValkyrieM IO (Maybe Mesh)
-    (Just mat) <- obtainResource "data/t.mtl" :: ValkyrieM IO (Maybe Material)
     useProgram p
-    bindMatrix44 p "M" $ (scale 3 3 3) <::> (rotationY (Radians t))
     bindMatrix44 p "VP" $ (world^.rwView) <::> (world^.rwProj)
+    mapM_ (drawModel p world) $ world ^. rwModels
+    
+drawModel :: MonadIO m => Program -> RenderWorld -> Model -> m ()
+drawModel p world mod = do 
+    ins <- getInstances mod
+    let mesh = mod^.modelMesh
     bindMeshVBO mesh
     bindMeshAttrs p
-    bindMaterial p mat
-    drawMeshPart "cube" mesh
+    mapM_ (uncurry $ drawPart p mesh ins) $ mod^.modelMaterials
     unbindMeshAttrs p
+    
+drawPart :: MonadIO m => Program -> Mesh -> [Matrix44] -> String -> Material -> m ()
+drawPart p mesh ins n mat = do 
+    bindMaterial p mat
+    bindMeshPart n mesh
+    mapM_ (\i -> bindMatrix44 p "M" i >> drawMeshPart n mesh) ins
     
 bindMeshAttrs :: MonadIO m => Program -> m ()
 bindMeshAttrs p = do 
