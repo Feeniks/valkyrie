@@ -15,7 +15,29 @@ cabal-version:       >=1.10
 
 library
   hs-source-dirs:      src
-  exposed-modules:     Valkyrie, Valkyrie.Resource.Types
+  exposed-modules:     Valkyrie,
+                       Valkyrie.Types, 
+                       Valkyrie.Valkyrie,
+                       Valkyrie.Math, 
+                       Valkyrie.Resource,
+                       Valkyrie.Resource.Types,
+                       Valkyrie.Resource.File,
+                       Valkyrie.Binary,
+                       Valkyrie.Game,
+                       Valkyrie.Engine,
+                       Valkyrie.Timer,
+                       Valkyrie.Timer.Types,
+                       Valkyrie.Render,
+                       Valkyrie.Render.Types,
+                       Valkyrie.Graphics.Util,
+                       Valkyrie.Graphics.Mesh,
+                       Valkyrie.Graphics.Mesh.Types,
+                       Valkyrie.Graphics.Material,
+                       Valkyrie.Graphics.Material.Types,
+                       Valkyrie.Graphics.Model,
+                       Valkyrie.Graphics.Model.Types,
+                       Valkyrie.Graphics.Shader,
+                       Valkyrie.Graphics.Program
   build-depends:       base >= 4.7 && < 5 
                      , mtl >= 2.2.1 
                      , lens >= 4.7.0.1 
@@ -41,8 +63,9 @@ executable test
   ghc-options:         -threaded -rtsopts -with-rtsopts=-N
   build-depends:       base 
                      , mtl >= 2.2.1
+                     , lens >= 4.7.0.1 
                      , bytestring >= 0.10.6.0 
-                     , valkyrie
+                     , valkyrie >= 0.1.0
   default-language:    Haskell2010
 
 source-repository head

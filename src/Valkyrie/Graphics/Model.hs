@@ -2,10 +2,7 @@
 module Valkyrie.Graphics.Model(
     Valkyrie.Graphics.Model.Types.Model(..),
     Valkyrie.Graphics.Model.Types.modelMesh,
-    Valkyrie.Graphics.Model.Types.modelMaterials,
-    setInstance,
-    removeInstance,
-    getInstances
+    Valkyrie.Graphics.Model.Types.modelMaterials
 ) where 
 
 import Valkyrie.Types
@@ -24,8 +21,6 @@ import Valkyrie.Graphics.Material
 import qualified Codec.Picture as JP
 import qualified Codec.Picture.Types as JT
 import Control.Applicative
-import Control.Concurrent.STM
-import Control.Concurrent.STM.TVar
 import Control.Lens
 import Control.Lens.TH
 import Control.Monad
@@ -52,17 +47,6 @@ instance Resource Model where
 instance Eq Model where 
     (==) ma mb = view (modelMesh.meshVBO) ma == view (modelMesh.meshVBO) mb
     
-setInstance :: MonadIO m => Model -> String -> Matrix44 -> m ()
-setInstance m n v = liftIO . atomically $ modifyTVar (m^.modelInstances) $ set (at n) (Just v)
-
-removeInstance :: MonadIO m => Model -> String -> m ()
-removeInstance m n = liftIO . atomically $ modifyTVar (m^.modelInstances) $ set (at n) Nothing
-
-getInstances :: MonadIO m => Model -> m [Matrix44]
-getInstances m = do 
-    ins <- liftIO . atomically $ readTVar $ m ^. modelInstances
-    return $ (fmap snd . M.toList) ins
-
 loadModel :: (MonadIO m, ResourceStream rs) => ResourceManager -> Load rs m Model
 loadModel rm = do 
     len <- remaining
@@ -76,11 +60,9 @@ createModel :: MonadIO m => ResourceManager -> String -> M.Map String String -> 
 createModel rm meshP matPs = do 
     mesh <- fmap fromJust $ obtainResourceInternal meshP rm
     mats <- sequence $ fmap (fmap fromJust . flip obtainResourceInternal rm) matPs
-    ins <- liftIO . atomically $ newTVar M.empty
     return $ Model {
         _modelMesh = mesh,
-        _modelMaterials = M.toList mats,
-        _modelInstances = ins
+        _modelMaterials = M.toList mats
     }
         
 parseModel = do 

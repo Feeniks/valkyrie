@@ -15,10 +15,7 @@ import Prelude hiding (init)
 data TestGame = TG
 
 instance Game TestGame where 
-    init g = do 
-        (Just mod) <- obtainResource "data/cube_test.mdl"
-        useModel mod
-        return g
+    init = return
     
     tick g = do 
         tme <- timer
@@ -27,11 +24,11 @@ instance Game TestGame where
         ks <- keyState Key'Escape
         when (ks == KeyState'Pressed) exitValkyrie
         (Just mod) <- obtainResource "data/cube_test.mdl"
-        setInstance mod "t" $ (scale 2 2 2 <::> rotationY (Radians $ t ^. elapsedSeconds) <::> translate (-1.5) 0 0)
-        setInstance mod "u" $ (scale 2 2 2 <::> rotationY (Radians $ t ^. elapsedSeconds) <::> translate 1.5 0 0)
+        setModel "t" mod $ (scale 2 2 2 <::> rotationY (Radians $ t ^. elapsedSeconds) <::> translate (-1.5) 0 0)
+        setModel "u" mod $ (scale 2 2 2 <::> rotationY (Radians $ t ^. elapsedSeconds) <::> translate 1.5 0 0)
         return g
 
     shutdown _ = return ()
-        
+    
 main :: IO ()
 main = valkyrie TG

@@ -11,12 +11,10 @@ module Valkyrie(
     Valkyrie.Resource.obtainResource,
     Valkyrie.Resource.releaseResource,
     Valkyrie.Graphics.Model.Model,
-    Valkyrie.Graphics.Model.setInstance,
-    Valkyrie.Graphics.Model.removeInstance,
     Valkyrie.Render.getFrameBufferSize,
     Valkyrie.Render.setViewMatrix,
     Valkyrie.Render.setProjectionMatrix,
-    Valkyrie.Render.useModel,
+    Valkyrie.Render.setModel,
     Valkyrie.Render.removeModel
 ) where 
 

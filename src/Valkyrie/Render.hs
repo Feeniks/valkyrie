@@ -5,7 +5,7 @@ module Valkyrie.Render(
     getFrameBufferSize,
     setViewMatrix, 
     setProjectionMatrix,
-    useModel,
+    setModel,
     removeModel,
     render
 ) where 
@@ -42,7 +42,7 @@ createRenderWorld cfg = do
     let view = lookAt (V3 5 5 5) (V3 0 0 0) (V3 0 1 0)
     let proj = perspective (Degrees 60) (width / height) 1.0 1000.0
     liftIO $ initRenderer
-    return $ RenderWorld { _rwView = view, _rwProj = proj, _rwModels = [] }
+    return $ RenderWorld { _rwView = view, _rwProj = proj, _rwModels = M.empty }
     
 getFrameBufferSize :: ValkyrieM IO (Int, Int)
 getFrameBufferSize = do 
@@ -56,11 +56,11 @@ setViewMatrix m = modify $ return . set (valkRenderWorld.rwView) m
 setProjectionMatrix :: Matrix44 -> ValkyrieM IO ()
 setProjectionMatrix m = modify $ return . set (valkRenderWorld.rwProj) m
 
-useModel :: Model -> ValkyrieM IO ()
-useModel m = modify $ return . over (valkRenderWorld.rwModels) (nub . (++[m]))
+setModel :: String -> Model -> Matrix44 -> ValkyrieM IO ()
+setModel k m t = modify $ return . set (valkRenderWorld.rwModels.at k) (Just (m,t))
 
-removeModel :: Model -> ValkyrieM IO ()
-removeModel m = modify $ return . over (valkRenderWorld.rwModels) (filter (/=m))
+removeModel :: String -> ValkyrieM IO ()
+removeModel k = modify $ return . set (valkRenderWorld.rwModels.at k) Nothing
 
 render :: ValkyrieM IO ()
 render = do 
@@ -86,22 +86,22 @@ frame world = do
     (Just p) <- obtainResource "data/valkyrie.prog"
     useProgram p
     bindMatrix44 p "VP" $ (world^.rwView) <::> (world^.rwProj)
-    mapM_ (drawModel p world) $ world ^. rwModels
+    mapM_ (uncurry $ drawModel p world) $ fmap snd $ M.toList (world ^. rwModels)
     
-drawModel :: MonadIO m => Program -> RenderWorld -> Model -> m ()
-drawModel p world mod = do 
-    ins <- getInstances mod
+drawModel :: MonadIO m => Program -> RenderWorld -> Model -> Matrix44 -> m ()
+drawModel p world mod tx = do 
     let mesh = mod^.modelMesh
     bindMeshVBO mesh
     bindMeshAttrs p
-    mapM_ (uncurry $ drawPart p mesh ins) $ mod^.modelMaterials
+    mapM_ (uncurry $ drawPart p mesh tx) $ mod^.modelMaterials
     unbindMeshAttrs p
     
-drawPart :: MonadIO m => Program -> Mesh -> [Matrix44] -> String -> Material -> m ()
-drawPart p mesh ins n mat = do 
+drawPart :: MonadIO m => Program -> Mesh -> Matrix44 -> String -> Material -> m ()
+drawPart p mesh tx n mat = do 
     bindMaterial p mat
     bindMeshPart n mesh
-    mapM_ (\i -> bindMatrix44 p "M" i >> drawMeshPart n mesh) ins
+    bindMatrix44 p "M" tx
+    drawMeshPart n mesh
     
 bindMeshAttrs :: MonadIO m => Program -> m ()
 bindMeshAttrs p = do 
